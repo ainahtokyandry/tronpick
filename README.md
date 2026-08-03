@@ -5,15 +5,18 @@ automatically.
 
 ## The strategy
 
-Fixed, exactly as specified:
-
 1. Click **START**
 2. Click the **middle tile of the bottom row** (x1.46 on Easy)
 3. If it is a gem, click the **middle tile of the next row up** (x2.12)
 4. If it is a gem, click **CASHOUT**
 5. Repeat
 
-A bomb at either step ends the round, and the next round starts on its own. The
+**Tiles per round** switches between the two variants: `2` is the ladder above,
+`1` cashes out as soon as the bottom tile turns up a gem (x1.46). One tile wins
+2 out of 3 rounds at a smaller multiplier, two tiles wins 4 out of 9 at a bigger
+one; both are negative expectation, one just swings less.
+
+A bomb at any step ends the round, and the next round starts on its own. The
 loop keeps going until you pause it or a stop condition fires.
 
 The bet amount, difficulty, and everything else stay exactly as you left them on
@@ -50,6 +53,7 @@ Two equivalent controls:
 
 | Field | Meaning |
 | --- | --- |
+| Tiles per round | `2` climbs to x2.12 before cashing out; `1` cashes out at x1.46. Takes effect on the next round. |
 | Bet amount | Typed into the page's bet field before each round. Blank = leave whatever is already there. |
 | Below balance / …bet this instead | Step the stake down once the balance drops under the threshold, e.g. `0.5` and `0.01`. It steps back up if the balance recovers. |
 | Stop below balance | Halt once the wallet balance falls to or under this. |

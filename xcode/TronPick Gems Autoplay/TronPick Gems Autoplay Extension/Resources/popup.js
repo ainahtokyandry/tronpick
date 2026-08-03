@@ -25,6 +25,7 @@
 
   function readConfig() {
     return {
+      picks: $("picks").value === "1" ? 1 : 2,
       betAmount: ($("betAmount").value || "").trim(),
       lowBet: ($("lowBet").value || "").trim(),
       lowBalanceAt: num("lowBalanceAt"),
@@ -39,9 +40,11 @@
   }
 
   function fillConfig(cfg) {
-    if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+    const focused = document.activeElement && document.activeElement.tagName;
+    if (focused === "INPUT" || focused === "SELECT") return;
     for (const f of TEXT_FIELDS) $(f).value = cfg[f] || "";
     for (const f of NUM_FIELDS) $(f).value = cfg[f] ? String(cfg[f]) : "";
+    $("picks").value = cfg.picks === 1 ? "1" : "2";
     $("hud").checked = cfg.hud !== false;
     $("keepAwake").checked = cfg.keepAwake !== false;
   }
@@ -60,11 +63,22 @@
     });
   }
 
+  // Settings go to storage as well as down the message channel. The content
+  // script watches storage, so a change still applies if messaging is unhappy —
+  // and it is what keeps the on-page panel in step with this one.
+  function pushConfig() {
+    const config = readConfig();
+    try {
+      api.storage.local.set(config);
+    } catch (_) {}
+    return send({ type: "setConfig", config });
+  }
+
   function render(state) {
     if (!state) {
       connected = false;
       $("status").textContent =
-        "Open https://tronpick.io/gems.php in this tab, then reopen this popup.";
+        "Not connected — open https://tronpick.io/gems.php and reload it.";
       $("toggle").disabled = true;
       return;
     }
@@ -98,7 +112,11 @@
     if (state && state.running) {
       render(await send({ type: "stop" }));
     } else {
-      render(await send({ type: "start", config: readConfig() }));
+      const config = readConfig();
+      try {
+        api.storage.local.set(config);
+      } catch (_) {}
+      render(await send({ type: "start", config }));
     }
   });
 
@@ -113,18 +131,20 @@
       : "No response — the content script is not running on this tab.";
   });
 
-  for (const id of [...TEXT_FIELDS, ...NUM_FIELDS, "hud", "keepAwake"]) {
-    $(id).addEventListener("change", () => send({ type: "setConfig", config: readConfig() }));
+  for (const id of [...TEXT_FIELDS, ...NUM_FIELDS, "picks", "hud", "keepAwake"]) {
+    $(id).addEventListener("change", pushConfig);
   }
 
   api.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs && tabs[0];
     if (!tab) return render(null);
     tabId = tab.id;
-    if (!/^https:\/\/tronpick\.io\/gems\.php/.test(tab.url || "")) {
-      api.storage.local.get(null, (saved) => fillConfig(saved || {}));
-      return render(null);
-    }
+    // Deliberately not gating on tab.url. Safari withholds it unless the
+    // extension holds the "tabs" permission, so a working gems tab comes back
+    // with an empty url and this popup used to declare itself disconnected on
+    // the very page it was sitting on. Asking the content script is the only
+    // check that proves anything: a reply means we are connected.
+    api.storage.local.get(null, (saved) => fillConfig(saved || {}));
     refresh();
     poll = setInterval(refresh, 700);
   });
