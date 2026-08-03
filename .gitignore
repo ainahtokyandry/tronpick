@@ -1,2 +1,14 @@
+# Build output
 xcode/build/
+DerivedData/
+
+# Xcode per-user state
+*.xcuserstate
+xcuserdata/
+
+# Assistant / editor local config
+.claude/
+CLAUDE.md
+
+# macOS
 .DS_Store
