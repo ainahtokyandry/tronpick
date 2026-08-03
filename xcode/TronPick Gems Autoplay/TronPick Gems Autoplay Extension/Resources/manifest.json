@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "TronPick Gems Autoplay",
+  "version": "1.0",
+  "description": "Automatically plays the TronPick gems tower: START, middle tile of row 1, middle tile of row 2, cash out, repeat.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://tronpick.io/*"],
+  "icons": {
+    "48": "images/icon-48.png",
+    "128": "images/icon-128.png",
+    "256": "images/icon-256.png",
+    "512": "images/icon-512.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TronPick Gems Autoplay",
+    "default_icon": {
+      "48": "images/icon-48.png",
+      "128": "images/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://tronpick.io/gems.php*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

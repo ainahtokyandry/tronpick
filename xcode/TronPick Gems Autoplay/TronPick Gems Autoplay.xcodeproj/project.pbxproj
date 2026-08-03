@@ -1,0 +1,613 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		625409903020C22C00CF7E25 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6254098F3020C22C00CF7E25 /* AppDelegate.swift */; };
+		625409943020C22C00CF7E25 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 625409923020C22C00CF7E25 /* Main.html */; };
+		625409963020C22C00CF7E25 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 625409953020C22C00CF7E25 /* Icon.png */; };
+		625409983020C22C00CF7E25 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 625409973020C22C00CF7E25 /* Style.css */; };
+		6254099A3020C22C00CF7E25 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 625409993020C22C00CF7E25 /* Script.js */; };
+		6254099C3020C22C00CF7E25 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6254099B3020C22C00CF7E25 /* ViewController.swift */; };
+		6254099F3020C22C00CF7E25 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6254099D3020C22C00CF7E25 /* Main.storyboard */; };
+		625409A13020C22E00CF7E25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 625409A03020C22E00CF7E25 /* Assets.xcassets */; };
+		625409A83020C22E00CF7E25 /* TronPick Gems Autoplay Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 625409A73020C22E00CF7E25 /* TronPick Gems Autoplay Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		625409AD3020C22E00CF7E25 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625409AC3020C22E00CF7E25 /* SafariWebExtensionHandler.swift */; };
+		625409BE3020C22E00CF7E25 /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 625409B93020C22E00CF7E25 /* popup.js */; };
+		625409BF3020C22E00CF7E25 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 625409BA3020C22E00CF7E25 /* images */; };
+		625409C03020C22E00CF7E25 /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 625409BB3020C22E00CF7E25 /* popup.html */; };
+		625409C13020C22E00CF7E25 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 625409BC3020C22E00CF7E25 /* manifest.json */; };
+		625409C23020C22E00CF7E25 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 625409BD3020C22E00CF7E25 /* content.js */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		625409A93020C22E00CF7E25 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 625409843020C22C00CF7E25 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 625409A63020C22E00CF7E25;
+			remoteInfo = "TronPick Gems Autoplay Extension";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		625409B43020C22E00CF7E25 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				625409A83020C22E00CF7E25 /* TronPick Gems Autoplay Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		6254098C3020C22C00CF7E25 /* TronPick Gems Autoplay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TronPick Gems Autoplay.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6254098F3020C22C00CF7E25 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		625409933020C22C00CF7E25 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		625409953020C22C00CF7E25 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		625409973020C22C00CF7E25 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		625409993020C22C00CF7E25 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		6254099B3020C22C00CF7E25 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		6254099E3020C22C00CF7E25 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		625409A03020C22E00CF7E25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		625409A23020C22E00CF7E25 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		625409A73020C22E00CF7E25 /* TronPick Gems Autoplay Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "TronPick Gems Autoplay Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		625409AC3020C22E00CF7E25 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		625409AE3020C22E00CF7E25 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		625409B93020C22E00CF7E25 /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = Resources/popup.js; sourceTree = "<group>"; };
+		625409BA3020C22E00CF7E25 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = Resources/images; sourceTree = "<group>"; };
+		625409BB3020C22E00CF7E25 /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = Resources/popup.html; sourceTree = "<group>"; };
+		625409BC3020C22E00CF7E25 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = Resources/manifest.json; sourceTree = "<group>"; };
+		625409BD3020C22E00CF7E25 /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = Resources/content.js; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		625409893020C22C00CF7E25 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		625409A43020C22E00CF7E25 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		625409833020C22C00CF7E25 = {
+			isa = PBXGroup;
+			children = (
+				6254098E3020C22C00CF7E25 /* TronPick Gems Autoplay */,
+				625409AB3020C22E00CF7E25 /* TronPick Gems Autoplay Extension */,
+				6254098D3020C22C00CF7E25 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6254098D3020C22C00CF7E25 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6254098C3020C22C00CF7E25 /* TronPick Gems Autoplay.app */,
+				625409A73020C22E00CF7E25 /* TronPick Gems Autoplay Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6254098E3020C22C00CF7E25 /* TronPick Gems Autoplay */ = {
+			isa = PBXGroup;
+			children = (
+				6254098F3020C22C00CF7E25 /* AppDelegate.swift */,
+				6254099B3020C22C00CF7E25 /* ViewController.swift */,
+				6254099D3020C22C00CF7E25 /* Main.storyboard */,
+				625409A03020C22E00CF7E25 /* Assets.xcassets */,
+				625409A23020C22E00CF7E25 /* Info.plist */,
+				625409913020C22C00CF7E25 /* Resources */,
+			);
+			path = "TronPick Gems Autoplay";
+			sourceTree = "<group>";
+		};
+		625409913020C22C00CF7E25 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				625409923020C22C00CF7E25 /* Main.html */,
+				625409953020C22C00CF7E25 /* Icon.png */,
+				625409973020C22C00CF7E25 /* Style.css */,
+				625409993020C22C00CF7E25 /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		625409AB3020C22E00CF7E25 /* TronPick Gems Autoplay Extension */ = {
+			isa = PBXGroup;
+			children = (
+				625409B83020C22E00CF7E25 /* Resources */,
+				625409AC3020C22E00CF7E25 /* SafariWebExtensionHandler.swift */,
+				625409AE3020C22E00CF7E25 /* Info.plist */,
+			);
+			path = "TronPick Gems Autoplay Extension";
+			sourceTree = "<group>";
+		};
+		625409B83020C22E00CF7E25 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				625409B93020C22E00CF7E25 /* popup.js */,
+				625409BA3020C22E00CF7E25 /* images */,
+				625409BB3020C22E00CF7E25 /* popup.html */,
+				625409BC3020C22E00CF7E25 /* manifest.json */,
+				625409BD3020C22E00CF7E25 /* content.js */,
+			);
+			name = Resources;
+			path = "TronPick Gems Autoplay Extension";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6254098B3020C22C00CF7E25 /* TronPick Gems Autoplay */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 625409B53020C22E00CF7E25 /* Build configuration list for PBXNativeTarget "TronPick Gems Autoplay" */;
+			buildPhases = (
+				625409883020C22C00CF7E25 /* Sources */,
+				625409893020C22C00CF7E25 /* Frameworks */,
+				6254098A3020C22C00CF7E25 /* Resources */,
+				625409B43020C22E00CF7E25 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				625409AA3020C22E00CF7E25 /* PBXTargetDependency */,
+			);
+			name = "TronPick Gems Autoplay";
+			packageProductDependencies = (
+			);
+			productName = "TronPick Gems Autoplay";
+			productReference = 6254098C3020C22C00CF7E25 /* TronPick Gems Autoplay.app */;
+			productType = "com.apple.product-type.application";
+		};
+		625409A63020C22E00CF7E25 /* TronPick Gems Autoplay Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 625409B13020C22E00CF7E25 /* Build configuration list for PBXNativeTarget "TronPick Gems Autoplay Extension" */;
+			buildPhases = (
+				625409A33020C22E00CF7E25 /* Sources */,
+				625409A43020C22E00CF7E25 /* Frameworks */,
+				625409A53020C22E00CF7E25 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "TronPick Gems Autoplay Extension";
+			packageProductDependencies = (
+			);
+			productName = "TronPick Gems Autoplay Extension";
+			productReference = 625409A73020C22E00CF7E25 /* TronPick Gems Autoplay Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		625409843020C22C00CF7E25 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					6254098B3020C22C00CF7E25 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					625409A63020C22E00CF7E25 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+				};
+			};
+			buildConfigurationList = 625409873020C22C00CF7E25 /* Build configuration list for PBXProject "TronPick Gems Autoplay" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 625409833020C22C00CF7E25;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6254098D3020C22C00CF7E25 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6254098B3020C22C00CF7E25 /* TronPick Gems Autoplay */,
+				625409A63020C22E00CF7E25 /* TronPick Gems Autoplay Extension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6254098A3020C22C00CF7E25 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				625409963020C22C00CF7E25 /* Icon.png in Resources */,
+				6254099F3020C22C00CF7E25 /* Main.storyboard in Resources */,
+				6254099A3020C22C00CF7E25 /* Script.js in Resources */,
+				625409943020C22C00CF7E25 /* Main.html in Resources */,
+				625409A13020C22E00CF7E25 /* Assets.xcassets in Resources */,
+				625409983020C22C00CF7E25 /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		625409A53020C22E00CF7E25 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				625409C13020C22E00CF7E25 /* manifest.json in Resources */,
+				625409BF3020C22E00CF7E25 /* images in Resources */,
+				625409C03020C22E00CF7E25 /* popup.html in Resources */,
+				625409BE3020C22E00CF7E25 /* popup.js in Resources */,
+				625409C23020C22E00CF7E25 /* content.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		625409883020C22C00CF7E25 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6254099C3020C22C00CF7E25 /* ViewController.swift in Sources */,
+				625409903020C22C00CF7E25 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		625409A33020C22E00CF7E25 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				625409AD3020C22E00CF7E25 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		625409AA3020C22E00CF7E25 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 625409A63020C22E00CF7E25 /* TronPick Gems Autoplay Extension */;
+			targetProxy = 625409A93020C22E00CF7E25 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		625409923020C22C00CF7E25 /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				625409933020C22C00CF7E25 /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		6254099D3020C22C00CF7E25 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				6254099E3020C22C00CF7E25 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		625409AF3020C22E00CF7E25 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		625409B03020C22E00CF7E25 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		625409B23020C22E00CF7E25 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "TronPick Gems Autoplay Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "TronPick Gems Autoplay Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ata.tronpickgems.Extension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		625409B33020C22E00CF7E25 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "TronPick Gems Autoplay Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "TronPick Gems Autoplay Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ata.tronpickgems.Extension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		625409B63020C22E00CF7E25 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "TronPick Gems Autoplay/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "TronPick Gems Autoplay";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ata.tronpickgems;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		625409B73020C22E00CF7E25 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "TronPick Gems Autoplay/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "TronPick Gems Autoplay";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ata.tronpickgems;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		625409873020C22C00CF7E25 /* Build configuration list for PBXProject "TronPick Gems Autoplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				625409AF3020C22E00CF7E25 /* Debug */,
+				625409B03020C22E00CF7E25 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		625409B13020C22E00CF7E25 /* Build configuration list for PBXNativeTarget "TronPick Gems Autoplay Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				625409B23020C22E00CF7E25 /* Debug */,
+				625409B33020C22E00CF7E25 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		625409B53020C22E00CF7E25 /* Build configuration list for PBXNativeTarget "TronPick Gems Autoplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				625409B63020C22E00CF7E25 /* Debug */,
+				625409B73020C22E00CF7E25 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 625409843020C22C00CF7E25 /* Project object */;
+}
