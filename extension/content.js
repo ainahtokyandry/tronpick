@@ -495,6 +495,7 @@
               (net !== null ? ` · net ${net >= 0 ? "+" : ""}${net.toFixed(6)}` : "")
           );
         }
+        saveStats();
 
         if (cfg.maxRounds > 0 && stats.rounds >= cfg.maxRounds) {
           return stop(`Reached ${cfg.maxRounds} rounds`);
@@ -565,8 +566,13 @@
     running = true;
     stopReason = "";
     const token = ++loopToken;
-    stats.startBalance = findBalance();
-    stats.balance = stats.startBalance;
+    // Only take the baseline the first time, so pausing and resuming continues
+    // the same session instead of zeroing Net. "Reset stats" re-baselines.
+    const bal = findBalance();
+    if (bal !== null) {
+      stats.balance = bal;
+      if (stats.startBalance === null) stats.startBalance = bal;
+    }
     const onPage = betInputValue();
     if (onPage) baseBet = onPage;
     acquireWakeLock();
@@ -585,11 +591,21 @@
     log(`Stopped — ${stopReason}`);
     setStatus(`Stopped: ${stopReason}`);
     persist();
+    saveStats();
   }
 
   function persist() {
     try {
       api.storage.local.set({ ...cfg, running });
+    } catch (_) {}
+  }
+
+  // Counters live in extension storage rather than memory, so a page reload or
+  // a Safari restart continues the same tally instead of starting over. Only
+  // "Reset stats" clears it. Written at round boundaries, not on every poll.
+  function saveStats() {
+    try {
+      api.storage.local.set({ stats: { ...stats }, log: logLines.slice(-40) });
     } catch (_) {}
   }
 
@@ -743,6 +759,7 @@
       });
       stats.balance = stats.startBalance;
       logLines.length = 0;
+      saveStats();
       renderHud();
       sendResponse(snapshot());
     } else if (msg.type === "diagnose") {
@@ -769,8 +786,27 @@
 
   /* ----------------------------------------------------------------- bootstrap */
 
-  api.storage.local.get(DEFAULTS, (saved) => {
-    cfg = { ...DEFAULTS, ...saved };
+  api.storage.local.get(null, (stored) => {
+    const saved = stored || {};
+    // cfg takes only the keys it owns, so the stats/log entries stored
+    // alongside it do not leak into the config object.
+    cfg = { ...DEFAULTS };
+    for (const k of Object.keys(DEFAULTS)) {
+      if (saved[k] !== undefined) cfg[k] = saved[k];
+    }
+
+    // Carry the previous tally forward — Net is only zeroed by "Reset stats".
+    if (saved.stats) {
+      for (const k of Object.keys(stats)) {
+        if (saved.stats[k] !== undefined) stats[k] = saved.stats[k];
+      }
+    }
+    if (Array.isArray(saved.log)) logLines.push(...saved.log.slice(-40));
+
+    // Keep the restored baseline but show the balance as it is right now.
+    const bal = findBalance();
+    if (bal !== null) stats.balance = bal;
+
     const wasRunning = !!saved.running;
     cfg.running = false;
     renderHud();

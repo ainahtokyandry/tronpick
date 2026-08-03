@@ -84,8 +84,17 @@ Neither approach survives closing the lid. Note also that Safari throttles timer
 in background tabs, so the gems tab should stay frontmost regardless.
 
 Pausing takes effect at the next click, so an in-flight round finishes its
-current step first. Stats reset with the **Reset stats** button; "Net" is
-measured from the balance at the moment you pressed Start.
+current step first.
+
+### Stats
+
+Counters are kept in extension storage (`browser.storage.local`), written at
+round boundaries rather than on every poll. They survive pausing, reloading the
+page, and quitting Safari, so a session's tally keeps accumulating across all of
+that. **Reset stats** is the only thing that clears them.
+
+"Net" is the balance now minus the balance when the counters were last reset —
+*not* since you pressed Start, so pausing and resuming does not zero it.
 
 ## How elements are found
 
