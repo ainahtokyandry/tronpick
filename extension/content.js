@@ -33,7 +33,6 @@
   const DEFAULTS = {
     running: false,
     betAmount: "", // "" = leave whatever is typed on the page
-    picks: 2, // tiles per round: 1 = cash out at x1.46, 2 = go one row up to x2.12
     lowBalanceAt: 0, // below this balance, switch to lowBet (0 = off)
     lowBet: "", // the reduced bet to use below lowBalanceAt
     keepAwake: true, // hold a screen wake lock while running
@@ -425,14 +424,12 @@
       }
     }
 
-    const picks = cfg.picks === 1 ? 1 : 2;
-
     setStatus("Starting round");
     realClick(findMainButton());
 
     const started = await waitFor(
       token,
-      () => gameState() === "active" && boardRows().length >= picks,
+      () => gameState() === "active" && boardRows().length >= 2,
       8000
     );
     if (!started) {
@@ -448,19 +445,25 @@
     log(`Round ${stats.rounds} open — bottom rows: ${ladder}`);
     await sleep(cfg.clickDelay);
 
-    // Climb the ladder one middle tile at a time: row 0 is x1.46, row 1 x2.12.
-    // A bomb at any step ends the round; surviving them all means cashing out.
-    for (let i = 0; i < picks; i++) {
-      if ((await pickTile(token, i)) === "bomb") {
-        stats.busts++;
-        if (i === 0) stats.firstPickLosses++;
-        else stats.secondPickLosses++;
-        log(`Round ${stats.rounds}: bomb on pick ${i + 1}`);
-        return "bust";
-      }
-      log(`Round ${stats.rounds}: gem on pick ${i + 1}`);
-      await sleep(cfg.clickDelay);
+    // Pick 1 — bottom row (x1.46)
+    if ((await pickTile(token, 0)) === "bomb") {
+      stats.busts++;
+      stats.firstPickLosses++;
+      log(`Round ${stats.rounds}: bomb on pick 1`);
+      return "bust";
     }
+    log(`Round ${stats.rounds}: gem on pick 1`);
+    await sleep(cfg.clickDelay);
+
+    // Pick 2 — next row up (x2.12)
+    if ((await pickTile(token, 1)) === "bomb") {
+      stats.busts++;
+      stats.secondPickLosses++;
+      log(`Round ${stats.rounds}: bomb on pick 2`);
+      return "bust";
+    }
+    log(`Round ${stats.rounds}: gem on pick 2 — cashing out`);
+    await sleep(cfg.clickDelay);
 
     setStatus("Cashing out");
     realClick(findMainButton());
@@ -573,10 +576,7 @@
     const onPage = betInputValue();
     if (onPage) baseBet = onPage;
     acquireWakeLock();
-    log(
-      `Autoplay started (bet ${cfg.betAmount || baseBet || "as-is"}, ` +
-        `${cfg.picks === 1 ? "1 tile" : "2 tiles"} per round)`
-    );
+    log(`Autoplay started (bet ${cfg.betAmount || baseBet || "as-is"})`);
     setStatus("Running");
     persist();
     mainLoop(token);
@@ -677,7 +677,6 @@
         <div class="body">
           <div class="st"></div>
           <div class="grid">
-            <span class="k">Tiles / round</span><span class="v" data-k="picks">2</span>
             <span class="k">Rounds</span><span class="v" data-k="rounds">0</span>
             <span class="k">Won / Lost</span><span class="v" data-k="wl">0 / 0</span>
             <span class="k">Bet</span><span class="v" data-k="bet">–</span>
@@ -709,7 +708,6 @@
     const q = (s) => hudRoot.querySelector(s);
     q(".dot").classList.toggle("on", running);
     q(".st").textContent = status;
-    q('[data-k="picks"]').textContent = cfg.picks === 1 ? "1 (x1.46)" : "2 (x2.12)";
     q('[data-k="rounds"]').textContent = String(stats.rounds);
     q('[data-k="wl"]').textContent = `${stats.wins} / ${stats.busts}`;
     q('[data-k="bet"]').textContent = betInputValue() || "–";
@@ -785,25 +783,6 @@
     }
     return true;
   });
-
-  // The popup writes settings straight to storage as well as messaging this
-  // tab, so a change lands even if the message never arrives. `running` is
-  // skipped: it is owned by start()/stop() here, not by the popup's form.
-  try {
-    api.storage.onChanged.addListener((changes, area) => {
-      if (area && area !== "local") return;
-      let touched = false;
-      for (const k of Object.keys(DEFAULTS)) {
-        if (k === "running") continue;
-        const c = changes[k];
-        if (c && c.newValue !== undefined && c.newValue !== cfg[k]) {
-          cfg[k] = c.newValue;
-          touched = true;
-        }
-      }
-      if (touched) renderHud();
-    });
-  } catch (_) {}
 
   /* ----------------------------------------------------------------- bootstrap */
 

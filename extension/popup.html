@@ -21,12 +21,11 @@
       .grid span:nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; }
       .pos { color: #5fd18a; } .neg { color: #ef7d7d; }
       label { display: block; color: #8fa3b5; font-size: 11px; margin: 8px 0 3px; }
-      input[type="text"], input[type="number"], select {
+      input[type="text"], input[type="number"] {
         width: 100%; box-sizing: border-box; padding: 6px 8px;
         background: #101820; border: 1px solid #35485c; border-radius: 5px;
         color: #e8eef4; font: inherit; font-size: 12px;
       }
-      select { height: 29px; }
       .row { display: flex; gap: 8px; }
       .row > div { flex: 1; }
       .hint { color: #6d8296; font-size: 10.5px; margin-top: 3px; }
@@ -36,7 +35,6 @@
       }
       #toggle.go { background: #3fa2e8; } #toggle.go:hover { background: #57b0ec; }
       #toggle.no { background: #d9534f; } #toggle.no:hover { background: #e0625e; }
-      #toggle:disabled { background: #31404f; color: #6d8296; cursor: not-allowed; }
       .sub { display: flex; gap: 7px; margin-top: 7px; }
       .sub button { background: #31404f; font-weight: 500; font-size: 11.5px; padding: 6px 0; }
       .sub button:hover { background: #3c4e60; }
@@ -60,16 +58,6 @@
         <span>Lost on pick 1 / 2</span><span id="s-picks">0 / 0</span>
         <span>Balance</span><span id="s-bal">–</span>
         <span>Net</span><span id="s-net">–</span>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label for="picks">Tiles per round</label>
-        <select id="picks">
-          <option value="1">1 — cash out at x1.46</option>
-          <option value="2">2 — cash out at x2.12</option>
-        </select>
       </div>
     </div>
 
