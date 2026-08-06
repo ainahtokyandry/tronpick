@@ -60,6 +60,22 @@ Two equivalent controls:
 It also stops on its own when the balance drops below one bet, or if START stops
 opening a round — that is the "money ran out" case.
 
+### Recovering instead of stopping
+
+A step that times out no longer ends the session. The loop re-reads the page and
+carries on from whatever it finds: if a round is still open it works out how many
+tiles have already been picked — by counting rows that are short a tile, bottom
+up — and resumes at the next one, or cashes out if both are already gems. A live
+stake is never abandoned, and a tile is never clicked twice.
+
+That reading is done from the board itself, not from what the loop remembers, so
+it also covers a page reload mid-round and a round you opened by hand.
+
+Failures back off (1.5s, 3s, 4.5s… capped at 8s) and only a run of eight in a row
+with no round completing in between actually stops the bot. Press **Diagnose** to
+see what it would do right now: `roundOpen`, `tilesAlreadyPicked`, and
+`wouldResumeAt`.
+
 ## Keeping the Mac awake
 
 **The app window does this — leave `TronPick Gems Autoplay.app` open.** While it

@@ -46,6 +46,9 @@
     hud: true,
   };
 
+  const PICKS = 2; // tiles taken per round: the x1.46 row, then the x2.12 row
+  const MAX_ERRORS = 8; // consecutive failed recoveries before really giving up
+
   let cfg = { ...DEFAULTS };
   let running = false;
   let loopToken = 0;
@@ -53,6 +56,7 @@
   let stopReason = "";
   let baseBet = ""; // the bet already on the page when you pressed Start
   let wakeLock = null;
+  let roundOpen = false; // a round this loop already counted is still in play
 
   const stats = {
     rounds: 0,
@@ -314,6 +318,25 @@
 
   /* ------------------------------------------------------------ round logic */
 
+  // Where the game actually is, read fresh from the page rather than from
+  // whatever this loop last believed. Everything resumable is derived here.
+  //
+  // Rows come back bottom-first and a row we have already picked from is short
+  // a tile, so counting short rows up from the bottom gives the number of picks
+  // that landed — regardless of whether this loop is the one that made them, or
+  // whether it ever saw them land.
+  function readBoard() {
+    const rows = boardRows();
+    const state = gameState();
+    const width = rows.reduce((n, r) => Math.max(n, r.tiles.length), 0);
+    let picked = 0;
+    for (const r of rows) {
+      if (r.tiles.length >= width) break;
+      picked++;
+    }
+    return { state, rows, width, picked, open: state === "active" };
+  }
+
   // Click one tile and wait to learn whether it was a gem or a bomb.
   async function pickTile(token, rowIndex) {
     const rows = boardRows();
@@ -382,16 +405,27 @@
   }
 
   async function playRound(token) {
-    // If a round is somehow already open (page reloaded mid-round, or you
-    // started one by hand), close it out first so we begin from a clean state.
-    if (gameState() === "active") {
-      log("A round was already open — cashing out to resync");
-      realClick(findMainButton());
-      await waitFor(token, () => gameState() === "idle", 8000);
-      await sleep(cfg.roundDelay);
+    const board = readBoard();
+
+    // A round is already open — this loop timed out mid-round, the page was
+    // reloaded, or you opened one by hand. Pick it up where the board says it
+    // got to instead of throwing away a live stake.
+    if (board.open) {
+      if (!roundOpen) {
+        stats.rounds++;
+        roundOpen = true;
+        log(`Adopting an open round as round ${stats.rounds}`);
+      }
+      const from = Math.min(board.picked, PICKS);
+      log(
+        `Resuming round ${stats.rounds} — ${board.picked} tile(s) already picked` +
+          (from >= PICKS ? ", cashing out" : `, next is pick ${from + 1}`)
+      );
+      setStatus("Resuming an open round");
+      return finishRound(token, from);
     }
 
-    if (gameState() !== "idle") throw new Error("START button not found on the page");
+    if (board.state !== "idle") throw new Error("START button not found on the page");
 
     // Choose this round's stake before betting: below the low-balance mark the
     // reduced bet is used, and it goes back up if the balance recovers.
@@ -438,6 +472,7 @@
       );
     }
     stats.rounds++;
+    roundOpen = true;
     const ladder = boardRows()
       .slice(0, 3)
       .map((r) => `x${r.value}(${r.tiles.length})`)
@@ -445,30 +480,32 @@
     log(`Round ${stats.rounds} open — bottom rows: ${ladder}`);
     await sleep(cfg.clickDelay);
 
-    // Pick 1 — bottom row (x1.46)
-    if ((await pickTile(token, 0)) === "bomb") {
-      stats.busts++;
-      stats.firstPickLosses++;
-      log(`Round ${stats.rounds}: bomb on pick 1`);
-      return "bust";
-    }
-    log(`Round ${stats.rounds}: gem on pick 1`);
-    await sleep(cfg.clickDelay);
+    return finishRound(token, 0);
+  }
 
-    // Pick 2 — next row up (x2.12)
-    if ((await pickTile(token, 1)) === "bomb") {
-      stats.busts++;
-      stats.secondPickLosses++;
-      log(`Round ${stats.rounds}: bomb on pick 2`);
-      return "bust";
+  // Climb the ladder from pick `from` upward, then cash out. Taking the
+  // starting index as an argument is what makes a round resumable: after a
+  // timeout the board is re-read and this is re-entered at the right step
+  // rather than from the bottom, which would re-click an already-picked tile.
+  async function finishRound(token, from) {
+    for (let i = from; i < PICKS; i++) {
+      if ((await pickTile(token, i)) === "bomb") {
+        stats.busts++;
+        if (i === 0) stats.firstPickLosses++;
+        else stats.secondPickLosses++;
+        roundOpen = false;
+        log(`Round ${stats.rounds}: bomb on pick ${i + 1}`);
+        return "bust";
+      }
+      log(`Round ${stats.rounds}: gem on pick ${i + 1}`);
+      await sleep(cfg.clickDelay);
     }
-    log(`Round ${stats.rounds}: gem on pick 2 — cashing out`);
-    await sleep(cfg.clickDelay);
 
     setStatus("Cashing out");
     realClick(findMainButton());
     const done = await waitFor(token, () => gameState() === "idle", 10000);
     if (!done) throw new Error("cashout did not complete");
+    roundOpen = false;
     stats.wins++;
     return "win";
   }
@@ -476,10 +513,12 @@
   /* ----------------------------------------------------------------- driver */
 
   async function mainLoop(token) {
+    let errors = 0;
     while (running && token === loopToken) {
       try {
         const result = await playRound(token);
         if (!running) break;
+        errors = 0;
 
         const balance = findBalance();
         if (balance !== null) stats.balance = balance;
@@ -514,7 +553,17 @@
         await sleep(cfg.roundDelay);
       } catch (err) {
         if (err instanceof Aborted) return;
-        return stop(`Error: ${err.message}`);
+        errors++;
+        log(`Hiccup (${errors}/${MAX_ERRORS}): ${err.message}`);
+        if (errors >= MAX_ERRORS) {
+          return stop(`Gave up after ${errors} failed recoveries — ${err.message}`);
+        }
+        // Back off, then go round again. playRound re-reads the page, so it
+        // resumes an open round rather than starting over — a failure is a
+        // pause, not the end of the session. Only a run of them stops us.
+        setStatus(`Recovering (${errors}/${MAX_ERRORS})`);
+        saveStats();
+        await sleep(Math.min(1500 * errors, 8000));
       }
     }
   }
@@ -771,9 +820,13 @@
         tiles: r.tiles.map((t) => txt(t.el)),
         middle: txt(middleTile(r, midX).el),
       }));
+      const board = readBoard();
       sendResponse({
         button: buttonLabel() || "(not found)",
         state: gameState(),
+        roundOpen: board.open,
+        tilesAlreadyPicked: board.picked,
+        wouldResumeAt: board.open ? Math.min(board.picked, PICKS) + 1 : "new round",
         rowsFound: rows.length,
         middleColumnX: midX === null ? null : Math.round(midX),
         rows: rows.slice(0, 4),
