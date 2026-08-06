@@ -1,9 +1,8 @@
 /* TronPick Gems Autoplay — content script
  *
  * Strategy (fixed):
- *   START -> middle tile of the bottom row (x1.46) -> if gem, middle tile of the
- *   next row up (x2.12) -> if gem, CASHOUT -> repeat.
- *   Any bomb ends the round and the next one starts automatically.
+ *   START -> middle tile of the bottom row (x1.46) -> if gem, CASHOUT -> repeat.
+ *   A bomb ends the round and the next one starts automatically.
  *
  * The page markup is not known ahead of time, so every element is located by
  * what it looks like on screen (text content + geometry) rather than by class
@@ -46,7 +45,10 @@
     hud: true,
   };
 
-  const PICKS = 2; // tiles taken per round: the x1.46 row, then the x2.12 row
+  // Tiles taken per round, counted from the bottom row up. Each row climbed
+  // costs about 3% of the stake in expectation, so one row is the cheapest
+  // round the game offers: -2.7% at x1.46 against -5.8% cashing out at x2.12.
+  const PICKS = 1;
   const MAX_ERRORS = 8; // consecutive failed recoveries before really giving up
 
   let cfg = { ...DEFAULTS };

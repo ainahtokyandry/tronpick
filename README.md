@@ -5,16 +5,20 @@ automatically.
 
 ## The strategy
 
-Fixed, exactly as specified:
+Fixed:
 
 1. Click **START**
 2. Click the **middle tile of the bottom row** (x1.46 on Easy)
-3. If it is a gem, click the **middle tile of the next row up** (x2.12)
-4. If it is a gem, click **CASHOUT**
-5. Repeat
+3. If it is a gem, click **CASHOUT**
+4. Repeat
 
-A bomb at either step ends the round, and the next round starts on its own. The
-loop keeps going until you pause it or a stop condition fires.
+A bomb ends the round, and the next round starts on its own. The loop keeps
+going until you pause it or a stop condition fires.
+
+One row per round is deliberate. The ladder charges roughly 3% of the stake for
+every row climbed, so stopping at x1.46 loses about 2.7% of the stake per round
+against 5.8% for cashing out at x2.12 — a little over twice the runtime from the
+same balance. Change `PICKS` in `extension/content.js` to climb further.
 
 The bet amount, difficulty, and everything else stay exactly as you left them on
 the page unless you set a bet in the popup.
@@ -156,8 +160,10 @@ xcode/                    generated Safari app wrapper
 
 - Automating play is very likely against tronpick's terms of service. Using this
   risks the account.
-- It does not change the odds. Picking two tiles and cashing out at x2.12 has
-  exactly the same expected value automated as by hand — it just gets there
-  faster, which also means losses accumulate faster. Set a stop-loss.
+- It does not change the odds. A round has exactly the same expected value
+  automated as it does by hand — it just gets there faster, which also means
+  losses accumulate faster. Set a stop-loss.
+- Every setting here trades runtime, not edge. Fewer rows per round and a
+  smaller bet both stretch how long a balance lasts; neither makes it grow.
 - Safari drops *Allow Unsigned Extensions* on every quit; re-tick it, or sign the
   app with a Developer ID to make it stick.
