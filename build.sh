@@ -10,6 +10,7 @@ cd "$(dirname "$0")"
 APP="TronPick Gems Autoplay"
 PROJ="xcode/$APP/$APP.xcodeproj"
 RESOURCES="xcode/$APP/$APP Extension/Resources"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
 
 if [ ! -d "$PROJ" ]; then
   echo "Xcode project missing — generating it."
@@ -43,6 +44,19 @@ xcodebuild \
   build | tail -5
 
 BUILT="$DERIVED/Build/Products/Release/$APP.app"
+
+# The build leaves a second, unembedded copy of the extension sitting next to
+# the app, carrying the same bundle identifier as the one inside it. Launch
+# Services registers both paths, Safari lists the extension twice, and enabling
+# both puts two content scripts on the page. Only one of them can own it — the
+# other stands down, and its popup then does nothing at all when pressed.
+LOOSE="$DERIVED/Build/Products/Release/$APP Extension.appex"
+if [ -d "$LOOSE" ]; then
+  echo "Removing the unembedded duplicate extension"
+  "$LSREGISTER" -u "$LOOSE" >/dev/null 2>&1 || true
+  rm -rf "$LOOSE" "$LOOSE.dSYM"
+fi
+
 echo
 echo "Built: $BUILT"
 

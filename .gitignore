@@ -12,3 +12,8 @@ CLAUDE.md
 
 # macOS
 .DS_Store
+
+# collected rounds
+server/rounds.jsonl
+server/cert.pem
+server/key.pem
