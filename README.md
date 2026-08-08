@@ -82,10 +82,16 @@ stake is never abandoned, and a tile is never clicked twice.
 That reading is done from the board itself, not from what the loop remembers, so
 it also covers a page reload mid-round and a round you opened by hand.
 
-Failures back off (1.5s, 3s, 4.5s… capped at 8s) and only a run of eight in a row
-with no round completing in between actually stops the bot. Press **Diagnose** to
-see what it would do right now: `roundOpen`, `tilesAlreadyPicked`, and
-`wouldResumeAt`.
+Failures back off (1.5s, 3s, 4.5s… capped at 8s). After eight in a row with no
+round completing in between, the page is **reloaded once** — eight failures
+usually means the page itself is wedged rather than the loop, and re-reading
+cannot fix a dialog you cannot see or a socket that died. `running` stays set in
+storage, so the loop starts itself again on the way back and adopts whatever
+round it finds open. Only if it wedges again after that reload does it stop for
+good; a round completing in between earns the next wedge its own reload.
+
+Press **Diagnose** to see what it would do right now: `roundOpen`,
+`tilesAlreadyPicked`, and `wouldResumeAt`.
 
 ### Losing the connection
 

@@ -83,6 +83,10 @@
   let wakeLock = null;
   let roundOpen = false; // a round this loop already counted is still in play
   let pausedByNetwork = false; // stood down until the connection comes back
+  // Whether the one reload has been spent. Kept in storage so it survives the
+  // reload it describes — otherwise a page that comes back just as stuck would
+  // reload itself for ever.
+  let reloadTried = false;
 
   const stats = {
     rounds: 0,
@@ -570,7 +574,7 @@
     const bet = currentBet();
     if (balance !== null) {
       stats.balance = balance;
-      if (stats.startBalance === null) stats.startBalance = balance;
+      if (!stats.startBalance) stats.startBalance = balance;
       if (cfg.minBalance > 0 && balance <= cfg.minBalance) {
         return stop(`Balance ${balance} reached your floor of ${cfg.minBalance}`);
       }
@@ -656,6 +660,12 @@
         const result = await playRound(token);
         if (!running) break;
         errors = 0;
+        // A round got through, so the page is working: give the next wedge its
+        // own reload rather than holding this one spent for the whole session.
+        if (reloadTried) {
+          reloadTried = false;
+          persist();
+        }
 
         const balance = findBalance();
         if (balance !== null) stats.balance = balance;
@@ -693,7 +703,23 @@
         errors++;
         log(`Hiccup (${errors}/${MAX_ERRORS}): ${err.message}`);
         if (errors >= MAX_ERRORS) {
-          return stop(`Gave up after ${errors} failed recoveries — ${err.message}`);
+          // Eight failures in a row is usually the page rather than the loop —
+          // a dialog we cannot see, a socket that died, a board that never
+          // finished animating. Re-reading cannot fix any of those; a reload
+          // can. `running` stays set in storage, so the loop starts itself
+          // again on the way back and adopts whatever round it finds open.
+          if (!reloadTried) {
+            reloadTried = true;
+            persist();
+            saveStats();
+            log(`Stuck after ${errors} recoveries — reloading the page once`);
+            setStatus("Reloading the page");
+            setTimeout(() => location.reload(), 400);
+            return;
+          }
+          return stop(
+            `Gave up after ${errors} failed recoveries and a reload — ${err.message}`
+          );
         }
         // Back off, then go round again. playRound re-reads the page, so it
         // resumes an open round rather than starting over — a failure is a
@@ -769,7 +795,7 @@
     const bal = findBalance();
     if (bal !== null) {
       stats.balance = bal;
-      if (stats.startBalance === null) stats.startBalance = bal;
+      if (!stats.startBalance) stats.startBalance = bal;
     }
     const onPage = betInputValue();
     if (onPage) baseBet = onPage;
@@ -837,7 +863,7 @@
 
   function persist() {
     try {
-      api.storage.local.set({ ...cfg, running, pausedByNetwork });
+      api.storage.local.set({ ...cfg, running, pausedByNetwork, reloadTried });
     } catch (_) {}
   }
 
@@ -1013,7 +1039,10 @@
         busts: 0,
         firstPickLosses: 0,
         secondPickLosses: 0,
-        startBalance: findBalance(),
+        // A baseline of zero is not a baseline: it made Net read as the whole
+        // balance. When the page cannot be read, leave it unset and let the
+        // first good reading take it.
+        startBalance: findBalance() || null,
       });
       stats.balance = stats.startBalance;
       logLines.length = 0;
@@ -1083,6 +1112,9 @@
       for (const k of Object.keys(stats)) {
         if (saved.stats[k] !== undefined) stats[k] = saved.stats[k];
       }
+      // A stored baseline of zero came from a reading that failed, and it makes
+      // Net the whole balance. Drop it and let the next good reading stand in.
+      if (!stats.startBalance) stats.startBalance = null;
     }
     if (Array.isArray(saved.log)) logLines.push(...saved.log.slice(-40));
     // Keep the restored baseline but show the balance as it is right now.
@@ -1092,6 +1124,7 @@
     // A session paused because the network went is still a session waiting to
     // run: a reload in the meantime must not quietly turn it into a stopped one.
     pausedByNetwork = !!saved.pausedByNetwork;
+    reloadTried = !!saved.reloadTried;
     const wasRunning = !!saved.running || pausedByNetwork;
     cfg.running = false;
     renderHud();
