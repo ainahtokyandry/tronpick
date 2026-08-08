@@ -158,12 +158,21 @@ login), so nothing depends on class names or IDs. Instead:
   cannot throw the aim off.
 - **START / CASHOUT** is the largest visible element whose text is exactly that
   word; its label is what tells the bot whether a round is open.
-- The **balance** is the top-most standalone decimal *on screen*. An `<option>`
-  counts only if it is the selected one, and only when nothing visible was
-  found: the currency picker holds an option per coin, each with its own number,
-  and an unselected one is a different wallet. Reading one of those showed a
-  balance of 0.0092 against a real 11.29 and stopped the session for running out
-  of funds it had plenty of.
+- The **balance** is the top-most standalone decimal that is actually *within
+  the viewport*, preferring an element the page itself names as a balance. Every
+  clause there was paid for:
+  - *Within the viewport*, because an element scrolled above the page sits at a
+    negative offset and sorts ahead of everything. One at −296px holding `0` was
+    read as the wallet, and a balance of 11.3 came back as 0.
+  - *Every element*, not a list of tags — the search is over `*`. It is a `<p>`
+    on this site, but that was found by looking rather than by guessing.
+  - Editable `<input>`s are skipped: they are controls, and the box beside the
+    bet field reads `0.000000` between rounds.
+  - The name is only a preference, so renaming it falls back to position.
+
+  Running out of funds ends a session, so it is read twice a moment apart and
+  only believed if the page still says so. Diagnose lists every candidate with
+  its offset — if this ever picks the wrong one again, that list says why.
 - The **bet field** is picked by ranking the number boxes: one the page labels
   *bet*, *stake* or *wager* wins, and being typeable counts for something. It has
   to be a ranking rather than a filter, because the site disables the bet box

@@ -317,23 +317,64 @@
   // of 11.298588 and stopped the session for running out of funds it had plenty
   // of. Options have no geometry to sort by either, so the first in the document
   // won — which is not even the coin being played.
-  function balanceElement() {
-    let best = null;
-    let fallback = null;
-    for (const el of document.body.querySelectorAll(
-      "span,div,b,strong,a,li,option,td,p,h1,h2,h3,label"
-    )) {
-      const t = ownText(el);
-      if (!/^\d+\.\d{2,10}$/.test(t)) continue;
-      if (el.tagName === "OPTION") {
-        if (el.selected && !fallback) fallback = { el, top: -1, value: parseFloat(t) };
-        continue;
+  // Every standalone decimal on screen, nearest the top of the page first. The
+  // balance is not always plain text — a header that shows it beside a currency
+  // chooser may hold it in a <select> or an <input>, neither of which has text
+  // for ownText to find, and missing it that way left the top-most number on
+  // screen being something else entirely.
+  function balanceCandidates() {
+    const out = [];
+    // Every element, not a list of tags. Twice now the header holding the
+    // balance has turned out not to be among the tags being asked for — a
+    // button, a heading, something wrapping it — and the search quietly settled
+    // on the next number down the page instead. Walking everything costs a few
+    // milliseconds at a round boundary and cannot miss.
+    for (const el of document.body.querySelectorAll("*")) {
+      let t;
+      if (el.tagName === "SELECT") {
+        const o = el.selectedOptions && el.selectedOptions[0];
+        t = o ? (o.textContent || "").replace(/\s+/g, " ").trim() : "";
+      } else if (el.tagName === "INPUT") {
+        // Only a box you cannot type in. An editable one is a control — the bet
+        // field, or the empty box beside it that reads 0.000000 between rounds
+        // and was taken for a wallet with nothing left in it.
+        if (!el.readOnly && !el.disabled) continue;
+        t = (el.value || "").trim();
+      } else {
+        t = ownText(el);
       }
+      if (!/^\d+\.\d{2,10}$/.test(t)) continue;
       if (!visible(el)) continue;
       const top = el.getBoundingClientRect().top;
-      if (!best || top < best.top) best = { el, top, value: parseFloat(t) };
+      // On screen, not merely in the document. `visible` asks about size and
+      // CSS, which an element scrolled off the top of the page passes happily:
+      // one sitting at -296px sorted above everything and was read as the
+      // wallet, which is how a balance of 11.3 came back as 0.
+      if (top < 0 || top > (window.innerHeight || 0)) continue;
+      out.push({ el, top, value: parseFloat(t) });
     }
-    return best || fallback;
+    // Nearest the top of the page, but a box the page itself calls a balance
+    // wins over one that merely sits high up. Only a preference: if the site
+    // renames it, this falls back to position, which is how it worked before.
+    const named = (b) =>
+      /bal|wallet|funds/i.test(
+        `${b.el.getAttribute("class") || ""} ${b.el.getAttribute("id") || ""}`
+      );
+    out.sort((a, b) => named(b) - named(a) || a.top - b.top);
+    return out;
+  }
+
+  function balanceElement() {
+    const seen = balanceCandidates();
+    if (seen.length) return seen[0];
+    // Nothing on screen: a hidden <select> still knows which coin is selected.
+    for (const o of document.body.querySelectorAll("option")) {
+      const t = ownText(o);
+      if (o.selected && /^\d+\.\d{2,10}$/.test(t)) {
+        return { el: o, top: -1, value: parseFloat(t) };
+      }
+    }
+    return null;
   }
 
   function findBalance() {
@@ -533,8 +574,23 @@
       if (cfg.minBalance > 0 && balance <= cfg.minBalance) {
         return stop(`Balance ${balance} reached your floor of ${cfg.minBalance}`);
       }
+      // Out of funds ends the session, so it is worth being sure. Reading the
+      // wrong number off the page has ended two already — a figure from the
+      // bets table below, a coin that was not the one being played — and one
+      // bad read should not be able to do that. Look again, a moment later,
+      // and only believe it if the page still says so.
       if (bet !== null && balance < bet) {
-        return stop(`Balance ${balance} is below the bet of ${bet} — out of funds`);
+        await sleep(600);
+        const again = findBalance();
+        if (again !== null && again < bet) {
+          const from = balanceElement();
+          return stop(
+            `Balance ${again} is below the bet of ${bet} — out of funds ` +
+              `(read from <${from ? from.el.tagName.toLowerCase() : "?"}>)`
+          );
+        }
+        log(`Balance read as ${balance}, then ${again} — ignoring the first`);
+        if (again !== null) stats.balance = again;
       }
     }
 
@@ -997,13 +1053,15 @@
         balance: findBalance(),
         // Where that number came from. Reading the wrong one stops the session
         // for running out of funds that were never missing.
-        balanceFrom: (() => {
-          const b = balanceElement();
-          if (!b) return "(not found)";
-          return `<${b.el.tagName.toLowerCase()}> = ${b.value} · ${
-            b.top < 0 ? "selected option" : `${Math.round(b.top)}px from the top`
-          }`;
-        })(),
+        // Every number it could have taken, nearest the top first, so a wrong
+        // pick can be seen rather than deduced.
+        balanceCandidates: balanceCandidates()
+          .slice(0, 6)
+          .map(
+            (b) =>
+              `${Math.round(b.top)}px <${b.el.tagName.toLowerCase()}` +
+              `${b.el.getAttribute("class") ? ` class="${b.el.getAttribute("class").slice(0, 30)}"` : ""}> = ${b.value}`
+          ),
       });
     }
   }
