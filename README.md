@@ -87,6 +87,25 @@ with no round completing in between actually stops the bot. Press **Diagnose** t
 see what it would do right now: `roundOpen`, `tilesAlreadyPicked`, and
 `wouldResumeAt`.
 
+### Losing the connection
+
+The bot stands down the moment the machine goes offline and picks up again when
+it comes back. Without that, clicks land on a page that cannot answer, the loop
+spends its eight recoveries finding that out, and a round with a live stake can
+be left open while that plays out. An open round is not abandoned: on resuming,
+the board is read fresh and play continues from whatever state it is in, exactly
+as after a reload.
+
+Any *deliberate* stop cancels the resume — Pause, a stop-loss, running out of
+funds. Coming back online is not a reason to overrule those. Pressing **Start**
+with no connection arms it rather than refusing, and it begins when the network
+returns.
+
+`navigator.onLine` only says the machine has a network interface up: Wi-Fi
+attached to a router with no internet still reads as online, and this will not
+notice. What catches that is the game failing to respond, which the recovery
+above already handles.
+
 ## Keeping the Mac awake
 
 **The app window does this — leave `TronPick Gems Autoplay.app` open.** While it
@@ -139,6 +158,12 @@ login), so nothing depends on class names or IDs. Instead:
   cannot throw the aim off.
 - **START / CASHOUT** is the largest visible element whose text is exactly that
   word; its label is what tells the bot whether a round is open.
+- The **balance** is the top-most standalone decimal *on screen*. An `<option>`
+  counts only if it is the selected one, and only when nothing visible was
+  found: the currency picker holds an option per coin, each with its own number,
+  and an unselected one is a different wallet. Reading one of those showed a
+  balance of 0.0092 against a real 11.29 and stopped the session for running out
+  of funds it had plenty of.
 - The **bet field** is picked by ranking the number boxes: one the page labels
   *bet*, *stake* or *wager* wins, and being typeable counts for something. It has
   to be a ranking rather than a filter, because the site disables the bet box

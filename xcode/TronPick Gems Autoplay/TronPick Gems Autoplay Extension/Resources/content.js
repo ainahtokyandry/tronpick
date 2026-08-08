@@ -82,6 +82,7 @@
   let baseBet = ""; // the bet already on the page when you pressed Start
   let wakeLock = null;
   let roundOpen = false; // a round this loop already counted is still in play
+  let pausedByNetwork = false; // stood down until the connection comes back
 
   const stats = {
     rounds: 0,
@@ -307,21 +308,37 @@
     return s.replace(/\s+/g, " ").trim();
   }
 
-  // Wallet balance — the top-most standalone decimal number on the page.
-  function findBalance() {
+  // Wallet balance — the top-most standalone decimal number on screen.
+  //
+  // An <option> counts only when it is the selected one, and only when nothing
+  // visible was found. The currency picker beside the balance carries an option
+  // per coin, each with a number of its own, and an unselected one is another
+  // wallet entirely: reading one of those showed 0.009200 against a real balance
+  // of 11.298588 and stopped the session for running out of funds it had plenty
+  // of. Options have no geometry to sort by either, so the first in the document
+  // won — which is not even the coin being played.
+  function balanceElement() {
     let best = null;
+    let fallback = null;
     for (const el of document.body.querySelectorAll(
       "span,div,b,strong,a,li,option,td,p,h1,h2,h3,label"
     )) {
       const t = ownText(el);
       if (!/^\d+\.\d{2,10}$/.test(t)) continue;
-      const isOption = el.tagName === "OPTION";
-      if (!isOption && !visible(el)) continue;
-      // an <option> has no useful geometry; treat it as top-of-page
-      const top = isOption ? -1 : el.getBoundingClientRect().top;
-      if (!best || top < best.top) best = { top, value: parseFloat(t) };
+      if (el.tagName === "OPTION") {
+        if (el.selected && !fallback) fallback = { el, top: -1, value: parseFloat(t) };
+        continue;
+      }
+      if (!visible(el)) continue;
+      const top = el.getBoundingClientRect().top;
+      if (!best || top < best.top) best = { el, top, value: parseFloat(t) };
     }
-    return best ? best.value : null;
+    return best || fallback;
+  }
+
+  function findBalance() {
+    const found = balanceElement();
+    return found ? found.value : null;
   }
 
   /* --------------------------------------------------------------- clicking */
@@ -676,6 +693,18 @@
 
   function start() {
     if (running) return;
+    // Pressing Start with no connection arms it rather than refusing: the round
+    // could not be played now, and this is the same waiting the loop would be
+    // doing anyway.
+    if (!navigator.onLine) {
+      pausedByNetwork = true;
+      stopReason = "Waiting for the network";
+      setStatus("Waiting for the network");
+      log("No network — will start when it comes back");
+      persist();
+      return;
+    }
+    pausedByNetwork = false;
     running = true;
     stopReason = "";
     const token = ++loopToken;
@@ -699,6 +728,11 @@
     if (!running && !reason) return;
     running = false;
     loopToken++;
+    // Stopping cancels an armed resume. Pressing Pause, hitting a stop-loss or
+    // running out of funds all mean this session is over; coming back online is
+    // not a reason to overrule any of them. Only the network handler below
+    // re-arms it, and it does so after this has run.
+    pausedByNetwork = false;
     releaseWakeLock();
     stopReason = reason || "Paused";
     log(`Stopped — ${stopReason}`);
@@ -707,9 +741,47 @@
     saveStats();
   }
 
+  /* -------------------------------------------------------------- network */
+
+  /* Losing the connection mid-session is worse than it looks: clicks land on a
+   * page that cannot answer, the loop spends its eight recoveries finding that
+   * out, and a round with a live stake in it can be left open while that plays
+   * out. Standing down the moment the machine goes offline, and picking up again
+   * when it comes back, costs a few lines. An open round is not abandoned by
+   * this — the loop reads the board on resuming and carries on from whatever it
+   * finds, exactly as it does after a reload.
+   *
+   * `navigator.onLine` only says the machine has a network interface up. Wi-Fi
+   * attached to a router with no internet behind it still reads as online, and
+   * nothing here will notice; what catches that is the game failing to respond,
+   * which the recovery already handles.
+   */
+
+  function offline() {
+    if (!running) return;
+    stop("The network went away");
+    pausedByNetwork = true; // after stop(), which clears it
+    persist();
+  }
+
+  function online() {
+    if (!pausedByNetwork || running) return;
+    pausedByNetwork = false;
+    persist();
+    log("Network is back — resuming");
+    // A moment for the page to be worth talking to again. Whatever state the
+    // board was left in, playRound reads it fresh.
+    setTimeout(() => {
+      if (!running && navigator.onLine && gameState() !== "unknown") start();
+    }, 2500);
+  }
+
+  window.addEventListener("offline", offline);
+  window.addEventListener("online", online);
+
   function persist() {
     try {
-      api.storage.local.set({ ...cfg, running });
+      api.storage.local.set({ ...cfg, running, pausedByNetwork });
     } catch (_) {}
   }
 
@@ -923,6 +995,15 @@
         })(),
         wantsBet: cfg.betAmount,
         balance: findBalance(),
+        // Where that number came from. Reading the wrong one stops the session
+        // for running out of funds that were never missing.
+        balanceFrom: (() => {
+          const b = balanceElement();
+          if (!b) return "(not found)";
+          return `<${b.el.tagName.toLowerCase()}> = ${b.value} · ${
+            b.top < 0 ? "selected option" : `${Math.round(b.top)}px from the top`
+          }`;
+        })(),
       });
     }
   }
@@ -950,7 +1031,10 @@
     const bal = findBalance();
     if (bal !== null) stats.balance = bal;
 
-    const wasRunning = !!saved.running;
+    // A session paused because the network went is still a session waiting to
+    // run: a reload in the meantime must not quietly turn it into a stopped one.
+    pausedByNetwork = !!saved.pausedByNetwork;
+    const wasRunning = !!saved.running || pausedByNetwork;
     cfg.running = false;
     renderHud();
     if (wasRunning) {
