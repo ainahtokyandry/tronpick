@@ -27,7 +27,7 @@
     "reach it. In Safari › Settings › Extensions:\n\n" +
     "  · turn off any duplicate Gems Autoplay\n" +
     "  · give the one that is left access to\n" +
-    "    tronpick.io and to localhost\n" +
+    "    tronpick.io\n" +
     "  · quit Safari, reopen, reload the page\n\n" +
     "If there is no panel either, the content script\n" +
     "is not running on this tab.";
@@ -56,7 +56,6 @@
       roundDelay: num("roundDelay", 900) || 900,
       hud: $("hud").checked,
       keepAwake: $("keepAwake").checked,
-      recordTiles: $("recordTiles").checked,
     };
   }
 
@@ -74,7 +73,6 @@
     for (const f of NUM_FIELDS) if (!held(f)) $(f).value = cfg[f] ? String(cfg[f]) : "";
     if (!held("hud")) $("hud").checked = cfg.hud !== false;
     if (!held("keepAwake")) $("keepAwake").checked = cfg.keepAwake !== false;
-    if (!held("recordTiles")) $("recordTiles").checked = cfg.recordTiles !== false;
     loaded = true;
   }
 
@@ -138,18 +136,6 @@
     net.textContent = s.net === null ? "–" : (s.net >= 0 ? "+" : "") + s.net.toFixed(6);
     net.className = s.net === null ? "" : s.net >= 0 ? "pos" : "neg";
 
-    // How many rounds have reached the collector, and how many are still
-    // waiting. What it makes of them is Tile report's job.
-    const t2 = state.tiles || {};
-    $("s-hit").textContent =
-      t2.sending === false
-        ? `holding ${t2.unsent}`
-        : t2.rounds !== undefined && t2.sending
-          ? `${t2.rounds}${t2.unsent ? ` +${t2.unsent}` : ""}`
-          : t2.unsent
-            ? `${t2.unsent} waiting`
-            : "–";
-
     const t = $("toggle");
     t.textContent = state.running ? "Pause" : "Start";
     t.className = state.running ? "no" : "go";
@@ -187,66 +173,7 @@
     out.textContent = text;
   }
 
-  onClick("tiles", async () => {
-    const r = await send({ type: "tileReport" });
-    show(r ? r.text : NO_REPLY);
-  });
-
-  // Safari's extension popup often refuses the async clipboard API — and has
-  // been known to leave the promise hanging rather than reject it, so it is
-  // raced against the clock before the old selection-based copy is tried.
-  async function copyText(text) {
-    try {
-      const ok = await Promise.race([
-        navigator.clipboard.writeText(text).then(() => true),
-        new Promise((r) => setTimeout(() => r(false), 1200)),
-      ]);
-      if (ok) return true;
-    } catch (_) {}
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      ta.remove();
-      return ok;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  // The raw log, for working on it outside the extension.
-  onClick("copyTiles", async () => {
-    const r = await send({ type: "tileData" });
-    if (!r) return show(NO_REPLY);
-    if (r.standDown) return show(r.text);
-    // Worth copying even with nothing recorded: what it carries then is the
-    // recorder's account of why, which is the more useful half.
-    if (!r.rounds && !r.recent) {
-      return show("Nothing to copy — no round has finished yet. Run a few.");
-    }
-    if (await copyText(r.json)) {
-      return show(
-        `Copied ${r.rounds} recorded rounds, notes on the last ${r.recent}, ` +
-          "and a board sample if one was taken."
-      );
-    }
-    show(r.json); // copying refused both ways — select it by hand instead
-  });
-
-  onClick("exportNow", async () => {
-    const r = await send({ type: "exportNow" });
-    show(r ? r.text : NO_REPLY);
-  });
-
-  onClick("resetTiles", async () => {
-    const r = await send({ type: "resetTiles" });
-    show(r ? r.text : NO_REPLY);
-  });
-
-  for (const id of [...TEXT_FIELDS, ...NUM_FIELDS, "hud", "keepAwake", "recordTiles"]) {
+  for (const id of [...TEXT_FIELDS, ...NUM_FIELDS, "hud", "keepAwake"]) {
     $(id).addEventListener("change", () => send({ type: "setConfig", config: readConfig() }));
   }
 

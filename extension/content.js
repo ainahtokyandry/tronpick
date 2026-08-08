@@ -57,7 +57,6 @@
     clickDelay: 450, // pause between individual clicks
     settleDelay: 700, // pause after a tile reveals, before trusting the result
     roundDelay: 900, // pause between rounds
-    recordTiles: true, // log every revealed board and test it for column bias
     hud: true,
   };
 
@@ -83,27 +82,6 @@
   let baseBet = ""; // the bet already on the page when you pressed Start
   let wakeLock = null;
   let roundOpen = false; // a round this loop already counted is still in play
-  let roundGrid = null; // this round's cells, captured while they are still findable
-
-  // Every finished round, described in full: how it ended, which tiles we took,
-  // and what each cell of the board was showing. A cell holds the signature
-  // itself rather than an index into a table of them, so a round stands on its
-  // own — which is what lets the collector work out what the pictures mean over
-  // the whole history, and change its mind later without anything here needing
-  // to be rewritten.
-  const history = [];
-  const HISTORY_MAX = 3000; // kept in the browser; the collector keeps the rest
-  const TILE_ROWS_MAX = 12; // rows read per round, counting up from the bottom
-  const EXPORT_EVERY = 50; // rounds to gather before sending a batch
-
-  // Rounds are numbered within a run of the page and the run is named, so the
-  // collector can tell a batch it has already filed from a new one however many
-  // times a flush is retried.
-  const session = Math.random().toString(36).slice(2, 10);
-  let seq = 0;
-  let unsent = 0; // records at the end of `history` not yet acknowledged
-  let flushing = false;
-  let collector = null; // what the collector last said, or why it could not be reached
 
   const stats = {
     rounds: 0,
@@ -401,570 +379,6 @@
     }
   }
 
-  /* -------------------------------------------------------- board recorder */
-
-  /* The question this answers: is the bomb equally likely in every column, and
-   * does the column we keep clicking behave like the ones we never touch?
-   *
-   * A revealed tile no longer says anything we could search the page for, so the
-   * grid is captured while the multipliers are still on screen and read back
-   * afterwards through the element references taken at that moment. Nothing here
-   * needs to know which icon is a gem and which is a bomb: the tiles we picked
-   * ourselves have a known outcome, and that is what teaches it the difference.
-   */
-
-  // Last path segment of a src or url(...), which is the stable part of an icon
-  // reference — the rest is directory noise and cache-busting query strings.
-  function tail(v) {
-    const s = String(v || "")
-      .replace(/^url\(\s*["']?/, "")
-      .replace(/["']?\s*\)$/, "")
-      .split("?")[0]
-      .split("#")[0];
-    return s.slice(s.lastIndexOf("/") + 1).slice(0, 40);
-  }
-
-  // Showing nothing is itself a way of looking. On this board a gem is an icon
-  // element and a bomb is an empty span — the losing tile has no picture at all —
-  // so a revealed tile with nothing in it has to be a description in its own
-  // right rather than a failure to read one. Without this every bomb ever
-  // revealed came back indistinguishable from a tile that could not be found.
-  const BLANK_SIG = "(blank)";
-
-  // What a tile is showing, described only by the picture inside it. The tile's
-  // own background and classes are skipped on purpose: the one we clicked is
-  // highlighted, and that must not make its icon look different from its
-  // neighbours' — the whole classification rests on identical icons matching.
-  // It is also what makes the blank above work: our own bomb and an untouched
-  // one both come back blank, where reading the tile's classes would have made
-  // the one we clicked unique.
-  function tileSig(el) {
-    if (!el || !el.isConnected) return "";
-    const t = txt(el);
-    if (MULT_RE.test(t)) return ""; // still face down
-    const icons = [];
-    const classes = [];
-    for (const n of [el, ...el.querySelectorAll("*")]) {
-      const tag = n.tagName.toLowerCase();
-      if (tag === "img") icons.push("img:" + tail(n.getAttribute("src")));
-      else if (tag === "use")
-        icons.push("use:" + tail(n.getAttribute("href") || n.getAttribute("xlink:href")));
-      else if (tag === "path")
-        icons.push("d:" + (n.getAttribute("d") || "").replace(/\s+/g, "").slice(0, 24));
-      else if (tag === "svg" && n.getAttribute("viewBox"))
-        icons.push("vb:" + n.getAttribute("viewBox"));
-      // Only leaves are probed for a drawn-on icon: a wrapper's background is
-      // decoration, and reading computed styles is the slow part of this walk.
-      if (n === el || n.children.length) continue;
-      const cs = getComputedStyle(n);
-      if (cs.backgroundImage && cs.backgroundImage !== "none")
-        icons.push("bg:" + tail(cs.backgroundImage));
-      for (const pseudo of ["::before", "::after"]) {
-        const c = getComputedStyle(n, pseudo).content;
-        if (c && !/^(none|normal|"\s*"|'\s*')$/.test(c)) icons.push("c:" + c.slice(0, 24));
-      }
-      if (!ownText(n)) for (const c of n.classList) classes.push("cls:" + c);
-    }
-    const parts = icons.length ? icons : classes.length ? classes : t ? ["txt:" + t.slice(0, 16)] : [];
-    // On screen, holding no text and no picture: a bomb. Anything not on screen
-    // stays unread — an element we cannot see is not evidence of anything.
-    if (!parts.length) return visible(el) ? BLANK_SIG : "";
-    // sorted and de-duplicated so the same picture always yields the same string
-    return [...new Set(parts)].sort().join("|").slice(0, 200);
-  }
-
-  // One x per column, taken across every full row, so a row that has already
-  // lost a tile still lines up with the grid.
-  function columnCenters(rows, width) {
-    const full = rows.filter((r) => r.tiles.length === width);
-    const src = full.length ? full : rows;
-    const out = [];
-    for (let c = 0; c < width; c++) {
-      const xs = src
-        .map((r) => r.tiles[c])
-        .filter(Boolean)
-        .map((t) => t.cx)
-        .sort((a, b) => a - b);
-      if (!xs.length) return [];
-      out.push(xs[Math.floor(xs.length / 2)]);
-    }
-    return out;
-  }
-
-  // The element that *is* the tile: the outermost box around a multiplier that
-  // does not also contain another one. Holding that reference is what lets a
-  // tile be read after its text has been swapped for an icon.
-  function tileBox(leaf, leaves, maxW) {
-    let el = leaf;
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-      if (leaves.some((o) => o !== leaf && p.contains(o))) break;
-      if (maxW && p.getBoundingClientRect().width > maxW * 1.15) break;
-      el = p;
-    }
-    return el;
-  }
-
-  // Same idea by coordinates, for a cell that was already revealed when the grid
-  // was captured, or whose element the site has since replaced.
-  function boxAt(x, y, maxW) {
-    let el = document.elementFromPoint(x, y);
-    if (!el) return null;
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-      if (p.getBoundingClientRect().width > maxW * 1.15) break;
-      el = p;
-    }
-    return el;
-  }
-
-  function captureGrid() {
-    const rows = boardRows().slice(0, TILE_ROWS_MAX);
-    const width = rows.reduce((n, r) => Math.max(n, r.tiles.length), 0);
-    if (!rows.length || width < 3) return null;
-    const cols = columnCenters(rows, width);
-    if (cols.length !== width) return null;
-    const span = Math.abs(cols[width - 1] - cols[0]) / (width - 1);
-    const leaves = rows.flatMap((r) => r.tiles.map((t) => t.el));
-    return rows.map((row) => {
-      const r0 = row.tiles[0].el.getBoundingClientRect();
-      const cy = r0.top + r0.height / 2;
-      return {
-        value: row.value,
-        cells: cols.map((cx) => {
-          const t = row.tiles.find((q) => Math.abs(q.cx - cx) < span / 2);
-          const el = t ? tileBox(t.el, leaves, span) : boxAt(cx, cy, span);
-          const r = el ? el.getBoundingClientRect() : null;
-          return {
-            el,
-            w: r ? r.width : span,
-            pageX: cx + window.scrollX,
-            pageY: cy + window.scrollY,
-          };
-        }),
-      };
-    });
-  }
-
-  // Which of captureGrid's two ways out was taken, for the log line that says
-  // the board could not be captured.
-  function captureTrouble() {
-    const rows = boardRows().slice(0, TILE_ROWS_MAX);
-    const width = rows.reduce((n, r) => Math.max(n, r.tiles.length), 0);
-    if (!rows.length) return "no rows of multipliers were found on the page";
-    if (width < 3) return `the widest row has ${width} tile(s), not 3`;
-    const cols = columnCenters(rows, width);
-    if (cols.length !== width) {
-      return `${rows.length} rows found but their columns do not line up`;
-    }
-    return `${rows.length} rows of ${width} found — reason unclear`;
-  }
-
-  function cellEl(c) {
-    if (c.el && c.el.isConnected) return c.el;
-    return boxAt(c.pageX - window.scrollX, c.pageY - window.scrollY, c.w || 60);
-  }
-
-  // A board as it reads right now: the signature of each cell, or null where
-  // nothing could be read.
-  function readGrid(grid) {
-    return grid.map((row) => row.cells.map((c) => tileSig(cellEl(c)) || null));
-  }
-
-  // Why a board could not be read, in the four ways it can fail. "Nothing was
-  // recorded" on its own does not say whether the tiles have gone from the page,
-  // turned back face up, or are simply showing a picture nothing can be made of
-  // — and those want three different fixes.
-  function gridTrouble(grid) {
-    const n = { read: 0, faceDown: 0, missing: 0, unreadable: 0 };
-    for (const row of grid) {
-      for (const c of row.cells) {
-        const el = cellEl(c);
-        if (!el) n.missing++;
-        else if (MULT_RE.test(txt(el))) n.faceDown++;
-        else if (tileSig(el)) n.read++;
-        else n.unreadable++;
-      }
-    }
-    return `${n.read} read, ${n.faceDown} face down, ${n.missing} gone, ${n.unreadable} unreadable`;
-  }
-
-  // How many tiles each kind of ending has ever shown. A bomb reveals the whole
-  // board; a cashout shows only the tiles we took. Learning the ceiling
-  // separately for each is what keeps the wait below from costing a second and a
-  // half on every single round.
-  const reveals = {
-    win: { rounds: 0, best: 0, blank: 0 },
-    bust: { rounds: 0, best: 0, blank: 0 },
-  };
-  const REVEAL_WAIT = 1500;
-
-  // Read the board back once the round is over. The reveal is animated, so it is
-  // sampled until it stops improving — but only for as long as it is still
-  // plausible that more is coming.
-  // Said once per page load. These are standing conditions rather than events —
-  // repeating them every round would bury the log, and saying nothing at all is
-  // what left the recorder looking like it was working when it was not running.
-  const warned = new Set();
-  function warnOnce(key, msg) {
-    if (warned.has(key)) return;
-    warned.add(key);
-    log(msg);
-  }
-
-  // What became of the last dozen rounds, every one of them, however it ended.
-  // The play log scrolls four lines a round and holds twenty-five, so anything
-  // said once is gone within six rounds — no use for a fault that only shows up
-  // after fifty. This is what Diagnose and the tile report read back.
-  const recordLog = [];
-  function noteRecord(line) {
-    recordLog.push(line);
-    if (recordLog.length > 12) recordLog.shift();
-  }
-
-  // Everything above works from a *description* of a tile. When that description
-  // comes back empty there is no way to tell from the outside whether the tile
-  // has gone, turned back over, or is showing something the description cannot
-  // express — so the first time a board reads back short, keep the markup itself
-  // for the row we picked from. Taken once, three cells, truncated: enough to
-  // write the right reader against, small enough to paste.
-  let sample = null;
-  function sampleBoard(grid, picks, why) {
-    if (sample) return;
-    const row = grid[(picks[0] && picks[0].row) || 0];
-    if (!row) return;
-    sample = {
-      why,
-      buttonSays: buttonLabel() || "(not found)",
-      cells: row.cells.slice(0, 3).map((c, i) => {
-        const el = cellEl(c);
-        if (!el) return `col ${i}: nothing at that point on the page`;
-        return (
-          `col ${i} <${el.tagName.toLowerCase()} class="${(el.getAttribute("class") || "").slice(0, 60)}"> ` +
-          `text=${JSON.stringify(txt(el).slice(0, 30))} ` +
-          `sig=${JSON.stringify(tileSig(el).slice(0, 60))}\n` +
-          `  ${(el.outerHTML || "").replace(/\s+/g, " ").slice(0, 400)}`
-        );
-      }),
-    };
-    // Kept in storage, not just in the page: it is taken on a losing round and
-    // is wanted later, quite possibly after a reload.
-    try {
-      api.storage.local.set({ sample });
-    } catch (_) {}
-  }
-
-  async function recordRound(result, picks) {
-    const grid = roundGrid;
-    roundGrid = null;
-    const kind = result === "win" ? "win" : "bust";
-    const tag = `#${stats.rounds} ${kind}`;
-    if (!cfg.recordTiles) {
-      noteRecord(`${tag} — recording is switched off`);
-      return warnOnce(
-        "off",
-        "Board recording is off — tick 'Record every revealed board' in the popup"
-      );
-    }
-    if (!grid) {
-      noteRecord(`${tag} — no board was captured at the start of the round`);
-      return warnOnce("nogrid", "No board was captured for this round — nothing to read back");
-    }
-    try {
-      const seen = reveals[kind];
-      const learning = seen.rounds < 5; // still finding out how much this ending shows
-      // Counted in tiles, not whole rows: a cashout reveals just the tiles we
-      // took, and waiting on a full row would mean waiting out the timeout on
-      // every winning round and then throwing the round away.
-      const cells = grid.reduce((n, row) => n + row.cells.length, 0);
-      let best = null;
-      const t0 = Date.now();
-      for (;;) {
-        const rows = readGrid(grid);
-        const known = rows.reduce((n, r) => n + r.filter(Boolean).length, 0);
-        if (!best || known > best.known) best = { rows, known };
-        // A read that came back completely blank never counts as enough, however
-        // low the ceiling has been set. Otherwise one bad early sample teaches it
-        // that this ending shows nothing, and it then stops waiting around long
-        // enough to ever find out otherwise.
-        const want = learning ? cells : Math.max(1, seen.best);
-        if (best.known >= want || !running || Date.now() - t0 > REVEAL_WAIT) break;
-        await sleep(150);
-      }
-      seen.rounds++;
-      seen.best = Math.max(seen.best, best.known);
-      if (!best.known) seen.blank++;
-      // Worth saying out loud early: how much each ending shows decides what the
-      // report can ever be built from, and it is invisible otherwise. A round
-      // that reads back as nothing at all keeps saying so, occasionally, however
-      // long it has been going on.
-      if (seen.rounds <= 3 || seen.rounds % 200 === 0 || (!best.known && seen.blank % 25 === 1)) {
-        log(
-          `${kind === "win" ? "Cashout" : "Bomb"} revealed ${best.known}/${cells} tiles` +
-            (best.known < cells ? ` — ${gridTrouble(grid)}` : "")
-        );
-      }
-      // A bust is the only round that ever shows a whole board, so a bust that
-      // reads back short is the one worth keeping the markup for.
-      if (best.known < cells && kind === "bust") {
-        sampleBoard(grid, picks, `${tag} read ${best.known} of ${cells} tiles`);
-      }
-
-      if (!best.known) {
-        noteRecord(`${tag} 0/${cells} tiles — ${gridTrouble(grid)}`);
-        return;
-      }
-
-      // The round really being over is what makes our own picks usable as ground
-      // truth: a completed cashout means every tile we took was a gem, and a
-      // board back on START after a bomb means the last one was not.
-      //
-      // The button lags the reveal, though, by a few hundred milliseconds after
-      // a bomb — and a cashout waits for it, so only busts ever arrive here
-      // early. Reading it once, immediately, stamped those rounds "outcome
-      // unknown", and an unknown round teaches the classifier nothing. Since a
-      // bust is the only round that ever shows it a bomb, the bomb never got a
-      // name, and a picture with no name is not counted at all: the hit rate sat
-      // at a confident 0 out of however many gems it had seen. So wait for it.
-      let ended = gameState() === "idle";
-      for (let i = 0; !ended && i < 10 && running; i++) {
-        await sleep(150);
-        ended = gameState() === "idle";
-      }
-
-      const outcome = ended ? (result === "win" ? "w" : "b") : "?";
-      noteRecord(
-        `${tag} ${best.known}/${cells} tiles, outcome ${outcome}` +
-          (best.known < cells ? ` — ${gridTrouble(grid)}` : "")
-      );
-      // Won and lost alike, and in the order they were played: which tile of a
-      // row was the bomb only means anything alongside how that round ended, and
-      // a history with the losses left out could not name a bomb at all.
-      keep({
-        seq: ++seq,
-        session,
-        t: Date.now(),
-        round: stats.rounds,
-        outcome,
-        picks: picks.map((p) => ({ row: p.row, col: p.col, saw: p.saw })),
-        width: best.rows.reduce((w, r) => Math.max(w, r.length), 0),
-        board: best.rows,
-        read: best.known,
-        cells,
-      });
-    } catch (err) {
-      noteRecord(`${tag} — threw: ${err.message}`);
-      log(`Could not record the board: ${err.message}`);
-    }
-  }
-
-  // Rounds recorded by the build that stored boards as indexes into a table of
-  // pictures. They are worth carrying rather than dropping — several hundred
-  // rounds of real play — and once resolved back to signatures they are ordinary
-  // records. Two things are recovered on the way past:
-  //
-  //  - a cell that no picture could be made of was a bomb, which had no picture
-  //    to make. A row holding exactly one such cell among otherwise readable
-  //    ones is that row, and rows not of that shape are left unread.
-  //  - they carry no clock, so they are stamped before any live round and kept
-  //    in the order they were played, which is the order the collector needs.
-  function adoptOldLog(old) {
-    const dict = old.dict;
-    const carried = [];
-    for (const r of old.log) {
-      const board = r.b.map((row) => {
-        const cells = row.map((i) => (i >= 0 && dict[i] ? dict[i] : null));
-        const unread = cells.filter((c) => !c).length;
-        if (unread === 1 && cells.length >= 3) cells[cells.indexOf(null)] = BLANK_SIG;
-        return cells;
-      });
-      carried.push({
-        seq: ++seq,
-        session: `${session}-carried`,
-        t: 0, // before anything played since; ordering falls back to seq
-        round: r.n,
-        outcome: r.r,
-        picks: (r.p || []).map((p) => ({
-          row: p[0],
-          col: p[1],
-          saw: p[2] === 1 ? "bomb" : "gem",
-        })),
-        width: board.reduce((w, row) => Math.max(w, row.length), 0),
-        board,
-        read: board.reduce((n, row) => n + row.filter(Boolean).length, 0),
-        cells: board.reduce((n, row) => n + row.length, 0),
-        carried: true,
-      });
-    }
-    // In front of this run's own rounds, since that is when they were played.
-    history.unshift(...carried);
-    unsent = history.length;
-    return carried.length;
-  }
-
-  function keep(record) {
-    history.push(record);
-    unsent++;
-    if (history.length > HISTORY_MAX) {
-      const dropped = history.splice(0, history.length - HISTORY_MAX).length;
-      // Only reachable with the collector down for thousands of rounds. Say so:
-      // rounds falling off the end unremarked is the one way this loses data.
-      if (unsent > history.length) {
-        unsent = history.length;
-        warnOnce(
-          "dropped",
-          `The collector has been unreachable long enough to lose ${dropped} rounds`
-        );
-      }
-    }
-    saveHistory();
-    if (unsent >= EXPORT_EVERY) flush();
-  }
-
-  function saveHistory() {
-    try {
-      api.storage.local.set({ history, unsent, seq, session });
-    } catch (_) {}
-  }
-
-  // Send whatever has not been acknowledged, oldest first. Nothing is marked
-  // sent until the collector says it stored it, so a collector that is down, or
-  // a reply that goes missing, costs a repeated batch rather than a lost one —
-  // and the collector files each round under session and number, so a repeat is
-  // recognised and dropped there rather than counted twice.
-  async function flush(reason) {
-    if (flushing || !unsent) return;
-    flushing = true;
-    const batch = history.slice(history.length - unsent);
-    try {
-      const res = await deliver(batch);
-      if (res && res.ok) {
-        unsent = Math.max(0, unsent - batch.length);
-        collector = { ok: true, at: Date.now(), summary: res.summary, text: res.text };
-        saveHistory();
-        log(
-          `Exported ${res.stored} rounds` +
-            (res.duplicates ? ` (${res.duplicates} already filed)` : "") +
-            ` — ${res.total} collected in all`
-        );
-      } else {
-        const why = (res && res.error) || "no answer from the extension worker";
-        collector = { ok: false, at: Date.now(), error: why };
-        warnOnce("collector", `Holding ${unsent} rounds — ${why}`);
-      }
-    } catch (err) {
-      collector = { ok: false, at: Date.now(), error: err.message };
-    } finally {
-      flushing = false;
-    }
-    if (reason === "stop") renderHud();
-  }
-
-  // https first, because a page served over https may not open a plain-http
-  // connection — the browser refuses it before the request is made. http is
-  // still tried behind it, for a collector running without a certificate where
-  // something else has permitted the connection.
-  const COLLECTOR_URLS = [
-    "https://localhost:8765/rounds",
-    "http://localhost:8765/rounds",
-  ];
-
-  // Two ways to the collector, tried in turn, because which of them a browser
-  // permits is not something that can be known from here.
-  //
-  // The worker is the right place for it: a page served over https may not be
-  // allowed to open a plain-http connection, and the worker is not part of the
-  // page. But if the worker does not answer, going directly costs nothing — and
-  // when both fail, the two errors together say which wall was hit, which is the
-  // difference between a worker that never loaded and a request that was
-  // refused before it was made.
-  async function deliver(records) {
-    const tried = [];
-    for (const url of COLLECTOR_URLS) {
-      const viaWorker = await ask({ type: "export", url, records });
-      if (viaWorker && viaWorker.ok) return viaWorker;
-      tried.push(`worker ${scheme(url)}: ${(viaWorker && viaWorker.error) || "no answer"}`);
-
-      const direct = await postDirect(url, records);
-      if (direct.ok) return direct;
-      tried.push(`page ${scheme(url)}: ${direct.error}`);
-    }
-    return { ok: false, error: tried.join(" · ") };
-  }
-
-  const scheme = (url) => url.slice(0, url.indexOf(":"));
-
-  async function postDirect(url, records) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ records }),
-      });
-      if (!res.ok) return { ok: false, error: `answered ${res.status}` };
-      const body = await res.json();
-      return body && body.ok
-        ? { ...body, ok: true }
-        : { ok: false, error: "batch refused" };
-    } catch (err) {
-      return { ok: false, error: (err && err.message) || String(err) };
-    }
-  }
-
-  function ask(msg) {
-    return new Promise((resolve) => {
-      let done = false;
-      const settle = (v) => {
-        if (!done) {
-          done = true;
-          resolve(v);
-        }
-      };
-      setTimeout(() => settle(null), 8000);
-      try {
-        // Safari answers this either by calling the callback or by resolving
-        // what it returns, depending on which namespace is in play. Taking
-        // whichever arrives first costs nothing and stops a worker that replied
-        // perfectly well from looking like one that never answered.
-        const maybe = api.runtime.sendMessage(msg, (resp) => {
-          void api.runtime.lastError;
-          settle(resp || null);
-        });
-        if (maybe && typeof maybe.then === "function") {
-          maybe.then((resp) => settle(resp || null), () => settle(null));
-        }
-      } catch (_) {
-        settle(null);
-      }
-    });
-  }
-
-  /* ------------------------------------------------------------ collected */
-
-  // The statistics used to live here. They are pure functions over the rounds
-  // — no page, no DOM — so they moved to the collector, where they run over the
-  // whole file instead of the last few thousand rounds a browser can hold, and
-  // where a change of mind about what a picture means is a re-read rather than a
-  // rebuild and a migration. What comes back is shown as-is.
-  function collectedReport() {
-    if (collector && collector.ok && collector.text) return collector.text;
-    const lines = [];
-    if (collector && !collector.ok) {
-      lines.push("The collector could not be reached:");
-      lines.push(`  ${collector.error}`);
-      lines.push("");
-      lines.push("Start it with:  node server/collect.js");
-      lines.push(`${unsent} round(s) are being held until it answers.`);
-    } else {
-      lines.push(`Nothing sent yet — a batch goes out every ${EXPORT_EVERY} rounds.`);
-      lines.push(`${history.length} round(s) recorded, ${unsent} waiting.`);
-      lines.push("");
-      lines.push("Start the collector with:  node server/collect.js");
-    }
-    lines.push("");
-    lines.push(...recentRecords());
-    return lines.join("\n");
-  }
-
-
   /* ------------------------------------------------------------ round logic */
 
   // Where the game actually is, read fresh from the page rather than from
@@ -998,24 +412,11 @@
     const target = middleTile(row, middleColumnX(rows));
     if (!target) throw new Error(`middle tile of row ${rowIndex + 1} not found`);
 
-    // Which column that turned out to be, counted across the whole grid rather
-    // than within this row — a row missing a tile would otherwise mis-number it.
-    const width = rows.reduce((n, r) => Math.max(n, r.tiles.length), 0);
-    const cols = columnCenters(rows, width);
-    const col = cols.length
-      ? cols.reduce(
-          (best, cx, i) =>
-            Math.abs(cx - target.cx) < Math.abs(cols[best] - target.cx) ? i : best,
-          0
-        )
-      : -1;
-
     const label = Number.isFinite(row.value) ? `x${row.value}` : `row ${rowIndex + 1}`;
     const totalBefore = rows.reduce((n, r) => n + r.tiles.length, 0);
     setStatus(`Picking middle tile of ${label}`);
     log(`Pick ${rowIndex + 1} → middle of ${label}`);
 
-    const seen = (result) => ({ result, col });
     realClick(target.el);
     let lastClick = Date.now();
     let attempts = 1;
@@ -1027,11 +428,11 @@
       checkAbort(token);
 
       // Round over -> the button flipped back to START, i.e. we hit a bomb.
-      if (gameState() === "idle") return seen("bomb");
+      if (gameState() === "idle") return "bomb";
 
       const total = multTiles().length;
       // Whole board revealed -> no multipliers left anywhere, also a bomb.
-      if (total === 0) return seen("bomb");
+      if (total === 0) return "bomb";
       if (total !== lastTotal) {
         lastTotal = total;
         changedAt = Date.now();
@@ -1043,9 +444,9 @@
         // flips reads a bomb as a gem, so wait until the board stops changing
         // and then judge by how much of it went.
         if (Date.now() - changedAt >= cfg.settleDelay) {
-          if (gameState() === "idle") return seen("bomb");
+          if (gameState() === "idle") return "bomb";
           // exactly our tile went -> gem; anything more -> the board is opening up
-          return seen(total === totalBefore - 1 ? "gem" : "bomb");
+          return total === totalBefore - 1 ? "gem" : "bomb";
         }
       } else if (Date.now() - lastClick > 2500 && attempts < 3) {
         // Nothing moved at all. The board may still have been animating the
@@ -1084,9 +485,6 @@
           (from >= PICKS ? ", cashing out" : `, next is pick ${from + 1}`)
       );
       setStatus("Resuming an open round");
-      // The rows already picked are short a tile, so this snapshot fills those
-      // cells in by position — a resumed round is still worth recording.
-      if (!roundGrid && cfg.recordTiles) roundGrid = captureGrid();
       return finishRound(token, from);
     }
 
@@ -1138,12 +536,6 @@
     }
     stats.rounds++;
     roundOpen = true;
-    // Take the grid now, while every tile still shows a multiplier and can be
-    // found by text. After this the board can only be read through these refs.
-    roundGrid = cfg.recordTiles ? captureGrid() : null;
-    if (cfg.recordTiles && !roundGrid) {
-      warnOnce("capture", `The board could not be captured — ${captureTrouble()}`);
-    }
     const ladder = boardRows()
       .slice(0, 3)
       .map((r) => `x${r.value}(${r.tiles.length})`)
@@ -1159,17 +551,14 @@
   // timeout the board is re-read and this is re-entered at the right step
   // rather than from the bottom, which would re-click an already-picked tile.
   async function finishRound(token, from) {
-    const picks = [];
     for (let i = from; i < PICKS; i++) {
-      const pick = await pickTile(token, i);
-      picks.push({ row: i, col: pick.col, saw: pick.result });
-      if (pick.result === "bomb") {
+      const result = await pickTile(token, i);
+      if (result === "bomb") {
         stats.busts++;
         if (i === 0) stats.firstPickLosses++;
         else stats.secondPickLosses++;
         roundOpen = false;
         log(`Round ${stats.rounds}: bomb on pick ${i + 1}`);
-        await recordRound("bust", picks);
         return "bust";
       }
       log(`Round ${stats.rounds}: gem on pick ${i + 1}`);
@@ -1182,7 +571,6 @@
     if (!done) throw new Error("cashout did not complete");
     roundOpen = false;
     stats.wins++;
-    await recordRound("win", picks);
     return "win";
   }
 
@@ -1317,9 +705,6 @@
     setStatus(`Stopped: ${stopReason}`);
     persist();
     saveStats();
-    // Whatever has been played since the last batch goes now rather than
-    // sitting in the browser until fifty more rounds that may never come.
-    if (unsent) flush("stop");
   }
 
   function persist() {
@@ -1347,12 +732,6 @@
       status,
       stopReason,
       stats: { ...stats, net },
-      tiles: {
-        rounds: history.length,
-        unsent,
-        sending: collector ? collector.ok : null,
-        ...((collector && collector.summary) || { hits: 0, picks: 0, ready: false }),
-      },
       cfg,
       log: logLines.slice(-25),
       detected: {
@@ -1405,12 +784,6 @@
                 color:#88a0b5; border-top:1px solid #2c3b4a; padding-top:6px;
                 display:none; white-space:pre-wrap; }
         .logs.show { display:block; }
-        /* Why the collector is not being reached, kept on screen rather than in
-           the log: it is a standing condition, and the log scrolls past it. */
-        .why { margin-top:7px; font-size:10.5px; line-height:1.35; color:#e0b48a;
-               background:#3a2a20; border:1px solid #6b4a2e; border-radius:5px;
-               padding:5px 7px; display:none; word-break:break-word; }
-        .why.show { display:block; }
       </style>
       <div class="panel">
         <div class="hd"><span class="dot"></span><span class="ttl">Gems Autoplay</span></div>
@@ -1422,9 +795,7 @@
             <span class="k">Bet</span><span class="v" data-k="bet">–</span>
             <span class="k">Balance</span><span class="v" data-k="bal">–</span>
             <span class="k">Net</span><span class="v" data-k="net">–</span>
-            <span class="k">Collected</span><span class="v" data-k="hit">–</span>
           </div>
-          <div class="why" data-k="why"></div>
           <div class="btns">
             <button class="go" data-a="toggle">Start</button>
             <button class="mini" data-a="logs" title="Show log">☰</button>
@@ -1462,26 +833,6 @@
         : null;
     netEl.textContent = net === null ? "–" : (net >= 0 ? "+" : "") + net.toFixed(6);
     netEl.className = "v " + (net === null ? "" : net >= 0 ? "pos" : "neg");
-    const why = q('[data-k="why"]');
-    if (collector && !collector.ok) {
-      why.textContent = `Collector unreachable — ${collector.error}`;
-      why.classList.add("show");
-    } else {
-      why.classList.remove("show");
-    }
-
-    // How many rounds the collector holds, not what it makes of them. The
-    // reading of them is a report, and a report belongs where you can sit and
-    // read it; what is worth a line on the page is whether the rounds are
-    // getting out of the browser at all.
-    const s = collector && collector.ok ? collector.summary : null;
-    q('[data-k="hit"]').textContent = s
-      ? `${s.rounds}${unsent ? ` +${unsent}` : ""}`
-      : collector
-        ? `holding ${unsent}`
-        : unsent
-          ? `${unsent} waiting`
-          : "–";
     const btn = q('[data-a="toggle"]');
     btn.textContent = running ? "Pause" : "Start";
     btn.className = running ? "no" : "go";
@@ -1541,42 +892,6 @@
       saveStats();
       renderHud();
       sendResponse(snapshot());
-    } else if (msg.type === "tileReport") {
-      sendResponse({ text: collectedReport() });
-    } else if (msg.type === "exportNow") {
-      flush("manual");
-      sendResponse({
-        text: unsent
-          ? `Sending ${unsent} round(s) — press Tile report in a moment.`
-          : "Everything recorded has already been collected.",
-      });
-    } else if (msg.type === "tileData") {
-      // The rounds still held in the browser, with the recorder's own account of
-      // the last few, which is what is wanted when the history is empty and the
-      // question is why.
-      sendResponse({
-        json: JSON.stringify(
-          { session, seq, unsent, collector, recent: recordLog, sample, reveals, history },
-          null,
-          1
-        ),
-        rounds: history.length,
-        recent: recordLog.length,
-      });
-    } else if (msg.type === "resetTiles") {
-      history.length = 0;
-      unsent = 0;
-      collector = null;
-      sample = null;
-      recordLog.length = 0;
-      api.storage.local.remove("sample");
-      reveals.win = { rounds: 0, best: 0, blank: 0 };
-      reveals.bust = { rounds: 0, best: 0, blank: 0 };
-      saveHistory();
-      renderHud();
-      // The collector's file is left alone on purpose: it is the record, and
-      // clearing a browser buffer is not a reason to throw the history away.
-      sendResponse({ text: "Cleared what the browser was holding. The collector's file is untouched." });
     } else if (msg.type === "diagnose") {
       const all = boardRows();
       const midX = middleColumnX(all);
@@ -1608,21 +923,6 @@
         })(),
         wantsBet: cfg.betAmount,
         balance: findBalance(),
-        recorder: {
-          on: cfg.recordTiles,
-          gridCaptured: !!roundGrid,
-          heldInBrowser: history.length,
-          waitingToSend: unsent,
-          sendsEvery: EXPORT_EVERY,
-          collector: collector
-            ? collector.ok
-              ? `answered — ${(collector.summary || {}).rounds} rounds collected`
-              : `unreachable — ${collector.error}`
-            : "not tried yet",
-          tilesRevealed: `bomb ${reveals.bust.best} (${reveals.bust.rounds} seen), ` +
-            `cashout ${reveals.win.best} (${reveals.win.rounds} seen)`,
-          lastRounds: recordLog.slice(),
-        },
       });
     }
   }
@@ -1646,34 +946,6 @@
       }
     }
     if (Array.isArray(saved.log)) logLines.push(...saved.log.slice(-40));
-    if (saved.sample) sample = saved.sample;
-
-    // Anything stored by an older build must not be able to take the bot down
-    // with it: the play loop does not need a single line of this to work.
-    try {
-      if (Array.isArray(saved.history)) {
-        history.push(...saved.history);
-        seq = Number(saved.seq) || history.length;
-        // Everything the last run had not had acknowledged is still owed, and a
-        // batch already filed is recognised by the collector and dropped there,
-        // so erring towards sending again is the safe direction.
-        unsent = Math.min(history.length, Math.max(0, Number(saved.unsent) || 0));
-      }
-      const old = saved.tiles;
-      if (old && Array.isArray(old.dict) && Array.isArray(old.log) && old.log.length) {
-        const n = adoptOldLog(old);
-        log(`Carried ${n} rounds recorded by an earlier build over to the collector`);
-        api.storage.local.remove("tiles");
-      }
-      saveHistory();
-      // Whatever is owed goes out now rather than waiting for another fifty
-      // rounds — after a reload that could be a long time, and after the
-      // carry-over above there may be hundreds of them.
-      if (unsent) flush("startup");
-    } catch (err) {
-      log(`Stored rounds could not be read (${err.message}) — use Clear boards`);
-    }
-
     // Keep the restored baseline but show the balance as it is right now.
     const bal = findBalance();
     if (bal !== null) stats.balance = bal;
